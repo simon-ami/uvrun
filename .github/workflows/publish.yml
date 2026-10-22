@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ github.token }}
 
       - name: Python Setup
         uses: actions/setup-python@v4
@@ -54,7 +54,7 @@ jobs:
       - name: Version and Release
         id: release
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "action@github.com"

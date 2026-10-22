@@ -14,11 +14,8 @@ pre-commit install --hook-type commit-msg
 
 ## Repository Setup (One-time)
 
-1. Create GitHub PAT (Personal Access Token):
-
-   - GitHub → Settings → Developer settings → Tokens (classic)
-   - Generate new token with `repo` scope
-   - Add as `GH_TOKEN` in repository secrets
+1. GitHub releases use the workflow's built-in repository token.
+   The release job grants it `contents: write`. No personal access token is needed.
 
 2. Set up PyPI publishing:
    - Create account at https://pypi.org/account/register/
