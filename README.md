@@ -15,9 +15,34 @@ Run Python scripts with inline metadata directly from URLs. This simple tool int
 
 ## Installation
 
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) >= 0.13.4
+and make it available on `PATH`. uvrun checks this executable before running scripts.
+
 ```bash
 pip install uvrun
 ```
+
+## Security update: October 2026
+
+The [emSign certificate incident](https://discuss.python.org/t/information-for-python-users-regarding-emudhra-emsign-ca-certificate-security-incident/109576)
+affects both Requests' certificate bundle and uv's separate certificate bundle.
+
+For existing installations:
+
+1. Follow the notice's hash-verified bootstrap to update pip to >= 26.2.2.
+2. In the Python environment containing uvrun, run:
+   ```bash
+   python -m pip install --upgrade uvrun "certifi>=2026.10.19"
+   ```
+3. Upgrade uv using its original installation method. Check `uv --version`;
+   it must be >= 0.13.4. For standalone installations, with an updated OS trust store:
+   ```bash
+   UV_SYSTEM_CERTS=true uv self update
+   ```
+
+Updating certifi does not update uv. Update separate pipx or uv tool environments
+as well. Scripts with their own HTTPS dependencies need updated certificate
+bundles in their own environments.
 
 ## Usage
 

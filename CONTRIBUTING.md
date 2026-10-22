@@ -76,6 +76,11 @@ feat!: change CLI interface
 
 ## Versioning
 
+The next release is 0.1.6. Both version files are prepared for that version.
+CI restores the missing v0.1.5 tag at its original published commit and forces
+one patch release. Later releases use semantic version calculation from Git tags.
+Do not infer the next release from version files alone.
+
 Commits trigger automatic version bumps:
 
 - `fix:` → Patch version (1.0.0 → 1.0.1)
@@ -91,4 +96,13 @@ Pre-commit hooks handle:
 - Import sorting (ruff)
 - Basic checks (trailing whitespace, file size, etc)
 
-Run manually: `pre-commit run --all-files`
+Run manually: `pre-commit run --all-files`.
+Run tests with `python -m unittest discover -s tests -v`.
+
+Release CI installs Hatchling with the patched pip, then builds with
+`python -m build --no-isolation`. This prevents isolated build environments
+from bootstrapping an older pip certificate bundle.
+
+If the PyPI upload fails, rerun only the failed publish job. It reuses the
+stored distribution artifacts without creating another release. GitHub asset uploads
+run in a separate job and do not block PyPI publishing.

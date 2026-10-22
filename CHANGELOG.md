@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Unreleased
+
+- Require certifi >= 2026.10.19 for repository discovery.
+- Check the uv executable and reject versions below 0.13.4 before running scripts.
+- Return script exit codes to the caller.
+- Document existing installation upgrades and bootstrap release CI with verified pip.
+
 
 ## v0.1.3 (2025-01-20)
 

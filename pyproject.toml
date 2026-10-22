@@ -1,11 +1,13 @@
 [project]
 name = "uvrun"
-version = "0.1.3"
+version = "0.1.6"
 authors = [{name = "Simon Benedict", email = "hi@sbenedict.dev"}]
 description = "Run Python scripts with inline metadata directly from URLs"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "certifi>=2026.10.19",
+    "packaging>=23.2",
     "click>=8.1.7",
     "tomli-w>=1.0.0",
     "rich>=13.7.0",
@@ -17,6 +19,7 @@ dev = [
     "pre-commit>=3.6.0",
     "ruff>=0.1.14",
     "build>=1.0.3",
+    "hatchling",
     "twine>=4.0.2",
 ]
 
@@ -34,13 +37,13 @@ packages = ["src/uvrun"]
 version_toml = ["pyproject.toml:project.version"]
 version_variables = ["src/uvrun/__init__.py:__version__"]
 commit_message = "chore: release {version}"
+allow_zero_version = true
 major_on_zero = true
 tag_format = "v{version}"
-changelog_components = "semantic_release.changelog.changelog_headers,semantic_release.changelog.compare_url"
-upload_to_repository = true
-build_command = "python -m build"
-dist_path = "dist/"
-branch = "main"
+build_command = "python -m build --no-isolation"
+
+[tool.semantic_release.branches.main]
+match = "main"
 
 [tool.ruff]
 target-version = "py311"

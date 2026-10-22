@@ -10,12 +10,11 @@ jobs:
     concurrency: release
     permissions:
       contents: write
-      id-token: write
       issues: write
       pull-requests: write
-    environment:
-      name: pypi
-      url: https://pypi.org/p/uvrun
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+      tag: ${{ steps.release.outputs.tag }}
 
     steps:
       - uses: actions/checkout@v4
@@ -31,16 +30,82 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install -U pip
-          pip install build python-semantic-release twine
+          # Hash from the Python security notice; bootstrap without trusting old pip CAs.
+          python -m pip install "pip @ https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl#sha256=fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70"
+          python -m pip install --upgrade "pip>=26.2.2" "certifi>=2026.10.19"
+          python -m pip install build hatchling "python-semantic-release==10.7.0" "certifi>=2026.10.19"
+
+      - name: Test
+        run: |
+          python -m pip install --no-build-isolation -e .
+          python -m unittest discover -s tests -v
+
+      # PyPI 0.1.5 was published from this commit without a corresponding Git tag.
+      - name: Restore published version baseline
+        run: |
+          baseline=b227a121412cc9f7a95b42b6192debe2dbcf5b37
+          git merge-base --is-ancestor "$baseline" HEAD
+          if git show-ref --verify --quiet refs/tags/v0.1.5; then
+            test "$(git rev-parse 'v0.1.5^{commit}')" = "$baseline"
+          else
+            git tag v0.1.5 "$baseline"
+          fi
 
       - name: Version and Release
+        id: release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "action@github.com"
-          semantic-release version
-          python -m build
-          semantic-release publish --no-build
-          git push --tags
+          # Recover once to 0.1.6, then resume normal semantic version calculation.
+          previous_version=$(semantic-release version --print-last-released)
+          if [ "$previous_version" = "0.1.5" ]; then
+            semantic-release version --patch
+          else
+            semantic-release version
+          fi
+
+      - name: Store distributions
+        if: steps.release.outputs.released == 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: distributions
+          path: dist/
+          if-no-files-found: error
+
+
+  publish:
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/uvrun
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: distributions
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-assets:
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: distributions
+          path: dist/
+      - name: Upload GitHub release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+        run: gh release upload "$RELEASE_TAG" dist/* --clobber
