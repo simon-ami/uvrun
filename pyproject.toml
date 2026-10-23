@@ -8,6 +8,7 @@ requires-python = ">=3.11"
 dependencies = [
     "certifi>=2026.10.19",
     "packaging>=23.2",
+    "prompt-toolkit>=3.0.48,<4",
     "click>=8.1.7",
     "tomli-w>=1.0.0",
     "rich>=13.7.0",

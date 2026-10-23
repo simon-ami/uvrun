@@ -5,6 +5,28 @@
 
 Run Python scripts with inline metadata directly from URLs. This simple tool integrates with [uv](https://github.com/astral-sh/uv) to provide a seamless experience for running Python scripts from GitHub repositories.
 
+## Interactive menu
+
+Run `uvrun` without arguments in a terminal to open the menu:
+
+- **Run:** use ↑/↓ or type to filter scripts. Enter or Insert selects a script.
+  Append arguments, then press Enter to run. Quote paths with spaces, for example
+  `"my audio.wav" --output "new folder"`. Escape returns to the script list.
+- **Add repository:** paste a GitHub repository URL and press Enter.
+- **Manage:** select a script and press Space or Enter to show or hide it.
+  Select a repository and press Enter, then `y` to remove it or `n` to cancel.
+
+Tab and Shift+Tab switch views. Ctrl+C exits. Escape exits from a view's main input.
+Saved repositories are checked automatically when opening the menu, listing scripts,
+or running a script by name. New, renamed, and removed scripts are detected without
+re-adding the repository. Unchanged repositories reuse their saved script lists.
+If GitHub is unavailable or rate-limits requests, uvrun warns and uses the last saved list.
+Visibility choices are preserved and saved in `~/.config/uvrun/config.toml`. Hidden scripts are omitted
+from the Run tab and `uvrun --list`, but can still be run by name.
+Removing a repository only removes it from uvrun's saved configuration.
+The menu closes before the script starts, so the script gets normal terminal input and output.
+Outside an interactive terminal, bare `uvrun` prints help instead.
+
 ## Features
 
 - Run Python scripts directly from GitHub repositories

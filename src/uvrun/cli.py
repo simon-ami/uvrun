@@ -1,13 +1,15 @@
 import shlex
 import shutil
 import subprocess
+import sys
 
 import click
 from packaging.version import InvalidVersion, Version
 from rich.console import Console
 
 from .config import Config
-from .discover import fetch_script_list
+from .discover import fetch_script_list, normalize_repo_url
+from .refresh import refresh_repositories
 
 console = Console()
 
@@ -62,8 +64,21 @@ def cli(
 ) -> None:
     config = Config()
 
+    if not (add is not None or show_list_flag or script_and_args or uv_args is not None or refresh):
+        if not (sys.stdin.isatty() and sys.stdout.isatty()):
+            click.echo(click.get_current_context().get_help())
+            return
+        from .menu import open_menu
+
+        refresh_saved_repos(config)
+        request = open_menu(config)
+        if request is not None:
+            run_script(request.script.url, request.args)
+        return
+
     if add:
         try:
+            add = normalize_repo_url(add)
             scripts = fetch_script_list(add)
             config.add_repo(add, scripts)
             script_count = len(scripts)
@@ -75,8 +90,11 @@ def cli(
             console.print(f"[red]Failed to add repository: {e}[/red]")
             return
 
+    if show_list_flag or script_and_args:
+        refresh_saved_repos(config, skip=add)
+
     if show_list_flag:
-        show_list()
+        show_list(config)
         return
 
     if script_and_args:
@@ -85,25 +103,41 @@ def cli(
 
         script_url = config.get_script_url(script_name)
         if script_url:
-            cmd = [checked_uv()]
-            if uv_args:
-                cmd.extend(shlex.split(uv_args))
-            cmd.extend(["run"])
-            if refresh:
-                cmd.append("--refresh")
-            cmd.extend([script_url] + script_args)
-            raise click.exceptions.Exit(subprocess.run(cmd).returncode)
+            run_script(script_url, script_args, uv_args, refresh)
         else:
             console.print(f"[red]Script {script_name} not found[/red]")
 
 
-def show_list():
-    config = Config()
+def run_script(
+    script_url: str, script_args: list[str], uv_args: str | None = None, refresh: bool = False
+) -> None:
+    cmd = [checked_uv()]
+    if uv_args:
+        cmd.extend(shlex.split(uv_args))
+    cmd.append("run")
+    if refresh:
+        cmd.append("--refresh")
+    cmd.extend([script_url] + script_args)
+    raise click.exceptions.Exit(subprocess.run(cmd).returncode)
+
+
+def refresh_saved_repos(config: Config, skip: str | None = None) -> None:
+    if not config.config["repos"]:
+        return
+    with console.status("Checking saved scripts…"):
+        failures = refresh_repositories(config, skip=skip)
+    for repo, error in failures.items():
+        click.echo(f"Cannot refresh {repo}: {error}. Using its saved script list.", err=True)
+
+
+def show_list(config: Config):
     console.print("[dim]Note: Scripts can be run with or without .py extension[/dim]\n")
     for repo_url, repo_info in config.config["repos"].items():
         console.print(f"[bold blue]{repo_url}[/bold blue]")
         scripts_by_dir = {}
         for script_path in sorted(repo_info["scripts"].values()):
+            if script_path in repo_info.get("hidden_scripts", []):
+                continue
             dir_name = script_path.rsplit("/", 1)[0] if "/" in script_path else ""
             if dir_name not in scripts_by_dir:
                 scripts_by_dir[dir_name] = []
